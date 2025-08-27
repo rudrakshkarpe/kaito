@@ -83,23 +83,22 @@ func monitorWorkspaces(ctx context.Context, k8sClient client.Client) {
 				}
 				phaseCounts[phase]++
 
-				// Count preset models from inference
-				if ws.Inference != nil && ws.Inference.Preset != nil && ws.Inference.Preset.Name != "" {
-					modelName := string(ws.Inference.Preset.Name)
-					if _, ok := modelCounts[modelName]; !ok {
-						modelCounts[modelName] = 0
-					}
-					modelCounts[modelName]++
-				}
+    // Track unique models per workspace
+    modelsInWorkspace := make(map[string]struct{})
+    if ws.Inference != nil && ws.Inference.Preset != nil && ws.Inference.Preset.Name != "" {
+        modelsInWorkspace[string(ws.Inference.Preset.Name)] = struct{}{}
+    }
+    if ws.Tuning != nil && ws.Tuning.Preset != nil && ws.Tuning.Preset.Name != "" {
+        modelsInWorkspace[string(ws.Tuning.Preset.Name)] = struct{}{}
+    }
 
-				// Count preset models from tuning
-				if ws.Tuning != nil && ws.Tuning.Preset != nil && ws.Tuning.Preset.Name != "" {
-					modelName := string(ws.Tuning.Preset.Name)
-					if _, ok := modelCounts[modelName]; !ok {
-						modelCounts[modelName] = 0
-					}
-					modelCounts[modelName]++
-				}
+    // Count unique models
+    for modelName := range modelsInWorkspace {
+        if _, ok := modelCounts[modelName]; !ok {
+            modelCounts[modelName] = 0
+        }
+        modelCounts[modelName]++
+    }
 			}
 
 			for phase, count := range phaseCounts {
